@@ -29,7 +29,6 @@
 </head>
 
 <body>
-
   <div class="hero_area">
     <?php require_once('header.php'); ?>
     <!-- slider section -->

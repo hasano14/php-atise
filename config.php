@@ -1,6 +1,6 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'Fior_Website');
-define('DB_USER', 'root');
-define('DB_PASSWORD', '');
+$db_host = 'localhost';
+$db_name = 'fior_website';
+$db_user = 'root';
+$db_password = '';
 ?>

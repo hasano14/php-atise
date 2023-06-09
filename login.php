@@ -1,36 +1,57 @@
 <!DOCTYPE html>
+
 <?php
-  require_once('config.php');
-  $db_host = $_ENV['DB_HOST'];
-  $db_name = $_ENV['DB_NAME'];
-  $db_user = $_ENV['DB_USER'];
-  $db_password = $_ENV['DB_PASSWORD'];
-  $db = new PDO('mysql:host=localhost;dbname=Fior_Website', 'root', '');
-  
-  if($_SERVER['REQUEST_METHOD'] === 'POST'){
-    //Get the email and password
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    
-    //Prepare the SQL statement
-    $stmt = $db->prepare("SELECT * FROM Login_Info WHERE email = :email AND password :password");
+require_once('config.php');
+try {
+  $db = new PDO("mysql:host=$db_host;dbname=$db_name", $db_user, $db_password);
+} catch (PDOException $e) {
+  echo "Connection failed: " . $e->getMessage();
+}
 
-    //Execute the prepared statement
-    $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':password', $password);
+//Check if the session has started and if the session has start, redirect the login.php to index.php
+if (isset($_SESSION['email'])) {
+  header("Location: index.php");
+  exit();
+}
 
-    //Execute the statement
-    $stmt->execute();
 
-    //Check for existing user
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    if($user){
-      header("Location: dashboard.php");
-      exit();
-    } else {
-      $error =  "Invalid email or password";
-    }
+//Check if the login form was submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  //Get the email and password
+  $email = $_POST['email'];
+  $password = $_POST['password'];
+
+  //Prepare the SQL statement
+  $result = $db->prepare("SELECT * FROM login_info" . " WHERE email = :email");
+
+  //Bind the parameters
+  $result->bindParam(':email', $email);
+
+  //Execute the statement
+  $result->execute();
+
+  if (!$result) {
+    die('There was an error running the query [' . $db->errorInfo() . ']');
   }
+
+  //Check for existing user
+  $user = $result->fetch(PDO::FETCH_ASSOC);
+
+  /* ` = password_hash(, PASSWORD_DEFAULT);` is hashing the user's password
+  using the PHP `password_hash()` function with the default algorithm. This is a security measure to
+  protect the user's password in case the database is compromised. The hashed password is then
+  stored in the database for future authentication. */
+  $hashedpassword = password_hash($password, PASSWORD_DEFAULT);
+  if ($user && password_verify($password, $hashedpassword)) {
+    $_SESSION['email'] = $email;
+    session_start();
+    echo '<div class="popup"><h3>Login Successful</h3></div>';
+    header("Location: index.php");
+    exit();
+  } else {
+    $error = "Invalid password";
+  }
+}
 ?>
 <html>
 
@@ -42,7 +63,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <!-- Site Metas -->
   <meta name="keywords" content="" />
-  <meta name="description" content=""                               />
+  <meta name="description" content="" />
   <meta name="author" content="" />
 
   <title>Login | Fior</title>
@@ -59,17 +80,28 @@
   <link href="css/style.css" rel="stylesheet" />
   <!-- responsive style -->
   <link href="css/responsive.css" rel="stylesheet" />
+  <style>
+    .popup {
+      position:fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      z-index: 9999;
+      border: 1px solid #000;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 
 <body class="sub_page">
 
   <div class="hero_area">
-  <?php require_once('header.php'); ?>
+    <?php require_once('header.php'); ?>
   </div>
 
-
   <!-- login section -->
-
   <section class="contact_section layout_padding">
     <div class="container ">
       <div class="heading_container justify-content-center">
@@ -84,11 +116,11 @@
         <div class="col-md-6 mx-auto">
           <form action="login.php" method="POST" onsubmit="return validateForm()">
             <div>
-              <input type="email" name="email" id="email" placeholder="Email" autocomplete="off" required/>
+              <input type="email" name="email" id="email" placeholder="Email" autocomplete="off" required />
             </div>
             <div>
               <input type="password" name="password" id="password" placeholder="Password" autocomplete="off" required />
-              <span name="user-error" id="user-error" class="error-message"><?php echo isset($error) ? $error : ''; ?></span>
+              <span name="user-error" id="user-error" class="error-message" style="color:red; padding-left: 8px;"><?php echo isset($error) ? $error : ''; ?></span>
             </div>
             <div class="d-flex mt-4">
               <button type="submit">
@@ -103,123 +135,7 @@
   <!-- end login section -->
 
   <!-- info section -->
-  <section class="info_section layout_padding">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-3">
-          <div class="info_logo">
-            <h5>
-              Fior
-            </h5>
-            <p>
-              There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration
-            </p>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="info_links pl-lg-5">
-            <h5>
-              Useful Link
-            </h5>
-            <ul>
-              <li>
-                <a href="index.html">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="about.html">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="gallery.html">
-                  Gallery
-                </a>
-              </li>
-              <li class="active">
-                <a href="contact.html">
-                  Contact Us
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="info_insta">
-            <h5>
-              Instagram
-            </h5>
-            <div class="insta_container">
-              <div>
-                <a href="">
-                  <div class="insta-box b-1">
-                    <img src="images/insta-1.png" alt="">
-                  </div>
-                </a>
-                <a href="">
-                  <div class="insta-box b-2">
-                    <img src="images/insta-2.png" alt="">
-                  </div>
-                </a>
-              </div>
-              <div>
-                <a href="">
-                  <div class="insta-box b-3">
-                    <img src="images/insta-3.png" alt="">
-                  </div>
-                </a>
-                <a href="">
-                  <div class="insta-box b-4">
-                    <img src="images/insta-4.png" alt="">
-                  </div>
-                </a>
-              </div>
-              <div>
-                <a href="">
-                  <div class="insta-box b-3">
-                    <img src="images/insta-5.png" alt="">
-                  </div>
-                </a>
-                <a href="">
-                  <div class="insta-box b-4">
-                    <img src="images/insta-6.png" alt="">
-                  </div>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="info_contact">
-            <h5>
-              Contact
-            </h5>
-            <div>
-              <img src="images/location-white.png" alt="">
-              <p>
-                It is a long
-                fact that a reader
-              </p>
-            </div>
-            <div>
-              <img src="images/telephone-white.png" alt="">
-              <p>
-                +01 1234567890
-              </p>
-            </div>
-            <div>
-              <img src="images/envelope-white.png" alt="">
-              <p>
-                demo@gmail.com
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
+  <?php require_once('info.php'); ?>
   <!-- end info_section -->
 
   <!-- footer section -->
@@ -238,24 +154,19 @@
     function validateForm() {
       var emailInput = document.getElementById("email");
       var passwordInput = document.getElementById("password");
-      var emailError = document.getElementById("email-error");
+      var emailError = document.getElementById("user-error");
 
       //Validate email format using regular express:
       var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(emailInput.value)) {
-        emailError.innerText = "Please enter a valid email address";
-        passwordInput.focus();
+        emailError.innerText = "Invalid Email Or Password";
         return false;
-      }else{
+      } else {
         emailError.innerText = "";
-        return true;
       }
+      return true;
     }
   </script>
-
-
 </body>
 
 </html>
-
-
